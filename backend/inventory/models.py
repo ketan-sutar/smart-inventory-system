@@ -1,5 +1,6 @@
 from django.db import models
 
+from django.conf import settings
 # Create your models here.
 
 class Category(models.Model):
@@ -31,3 +32,65 @@ class Product(models.Model):
   
   def __str__(self):
     return self.name
+  
+  
+class Inventory(models.Model):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE
+    )
+
+    warehouse = models.ForeignKey(
+        'warehouses.WareHouseModel',
+        on_delete=models.CASCADE
+    )
+
+    quantity = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = (
+            "product",
+            "warehouse"
+        )
+
+    def __str__(self):
+        return f"{self.product.name} - {self.warehouse.name}"
+    
+     
+      
+      
+      
+class StockTransaction(models.Model):
+
+    TRANSACTION_CHOICES = (
+        ("IN", "Stock In"),
+        ("OUT", "Stock Out"),
+        ("TRANSFER", "Transfer")
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE
+    )
+
+    warehouse = models.ForeignKey(
+        'warehouses.WareHouseModel',
+        on_delete=models.CASCADE
+    )
+
+    quantity = models.PositiveIntegerField()
+
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=TRANSACTION_CHOICES
+    )
+
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )

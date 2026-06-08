@@ -16,3 +16,18 @@ class ProductSerializer(serializers.ModelSerializer):
   class Meta:
     model=Product
     fields="__all__"
+    
+class StockInSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    warehouse_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class TransferSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+
+    source_warehouse = serializers.IntegerField()
+
+    destination_warehouse = serializers.IntegerField()
+
+    quantity = serializers.IntegerField(min_value=1)
