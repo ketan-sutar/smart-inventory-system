@@ -31,6 +31,8 @@ urlpatterns = [
     path('api/inventory/', include('inventory.urls')),
     path('api/warehouses/', include('warehouses.urls')),
     
+    path('api/audit/',include("audit_logs.urls"))
+    
     
     
     

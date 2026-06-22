@@ -10,6 +10,10 @@ from django.db import transaction
 
 from warehouses.models import WareHouseModel
 
+from audit_logs.utils import create_audit_log
+
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
   queryset=Category.objects.all()
   serializer_class=CategorySerializer
@@ -51,6 +55,14 @@ def stock_in(request):
     performed_by=request.user
   )
   
+  create_audit_log(
+      user=request.user,
+      action="STOCK_IN",
+      entity="Product",
+      entity_id=product.id,
+      description=f"Added {qty} units of {product.name} to {warehouse.name}"
+  )
+  
   return Response({
     "message":"Stock Added Succesfully!!"
   })
@@ -86,43 +98,70 @@ def stock_out(request):
         transaction_type="OUT",
         # performed_by=request.user
     )
+    create_audit_log(
+    user=request.user,
+    action="STOCK_OUT",
+    entity="Product",
+    entity_id=inventory.product.id,
+    description=f"Removed {qty} units of {inventory.product.name} from {inventory.warehouse.name}"
+)
 
     return Response({
         "message": "Stock removed successfully"
     })
     
     
-    
-
 @api_view(["POST"])
 def transfer_stock(request):
-  serz=TransferSerializer(
-    data=request.data
-  )
-  
-  serz.is_valid(raise_exception=True)
-  
-  product_id=serz.validated_data["product_id"]
-  
-  source_id=serz.validated_data["source_warehouse"]
-  
-  destination_id = serz.validated_data[
-        "destination_warehouse"
-    ]
 
-  qty = serz.validated_data["quantity"]
-  
-  with transaction.atomic():
-    
-    source_inventory=Inventory.objects.get(
-      product_id=product_id,
-      warehouse_id=source_id
-    )
-    
-    if source_inventory.quantity<qty:
-      return Response(
-        {"error":"Not enough STock!!"},
-        status=400
-      )
-    
-  
+    serializer = TransferSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    product_id = serializer.validated_data["product_id"]
+    source_id = serializer.validated_data["source_warehouse"]
+    destination_id = serializer.validated_data["destination_warehouse"]
+    qty = serializer.validated_data["quantity"]
+
+    with transaction.atomic():
+
+        source_inventory = Inventory.objects.get(
+            product_id=product_id,
+            warehouse_id=source_id
+        )
+
+        if source_inventory.quantity < qty:
+            return Response(
+                {"error": "Not enough stock"},
+                status=400
+            )
+
+        destination_inventory, created = Inventory.objects.get_or_create(
+            product_id=product_id,
+            warehouse_id=destination_id,
+            defaults={"quantity": 0}
+        )
+
+        source_inventory.quantity -= qty
+        destination_inventory.quantity += qty
+
+        source_inventory.save()
+        destination_inventory.save()
+
+        StockTransaction.objects.create(
+            product_id=product_id,
+            warehouse_id=source_id,
+            quantity=qty,
+            transaction_type="TRANSFER",
+            performed_by=request.user
+        )
+        create_audit_log(
+    user=request.user,
+    action="TRANSFER",
+    entity="Product",
+    entity_id=product_id,
+    description=f"Transferred {qty} units from Warehouse {source_id} to Warehouse {destination_id}"
+)
+
+    return Response({
+        "message": "Stock transferred successfully"
+    })
