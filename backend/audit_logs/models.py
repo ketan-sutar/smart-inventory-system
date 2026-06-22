@@ -31,7 +31,7 @@ class AuditLog(models.Model):
   
   entity_id=models.IntegerField()
   
-  decription = models.TextField()
+  description = models.TextField()
   
   timestamp=models.DateTimeField(
     auto_now_add=True
