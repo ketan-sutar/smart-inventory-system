@@ -48,7 +48,7 @@ def stock_in(request):
     warehouse=warehouse,
     quantity=qty,
     transaction_type="IN",
-    perfromed_by=request.user
+    performed_by=request.user
   )
   
   return Response({
@@ -84,7 +84,7 @@ def stock_out(request):
         warehouse=inventory.warehouse,
         quantity=qty,
         transaction_type="OUT",
-        performed_by=request.user
+        # performed_by=request.user
     )
 
     return Response({
@@ -116,7 +116,7 @@ def transfer_stock(request):
     
     source_inventory=Inventory.objects.get(
       product_id=product_id,
-      warehouse_id=warehouse_id
+      warehouse_id=source_id
     )
     
     if source_inventory.quantity<qty:
